@@ -17,7 +17,7 @@ copy_logs() {
 for container in "${containers[@]}"; do
 log_file="$log_dir/${container}_log.log"
 echo "Copying logs from $container to $log_file..."
-docker logs --since=2160h "$container" > "$log_file"
+docker logs --since=2160h "$container" &> "$log_file"
 done
 }
 
