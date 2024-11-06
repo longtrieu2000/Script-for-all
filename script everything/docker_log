@@ -1,0 +1,49 @@
+#!/bin/bash
+
+# M?ng các container c?n l?y logs
+containers=("mysafe_pacquiao" "mysafe_cskh" "mysafe_cms" "mysafe_landing-page" "mysafe_ont-mnt" "mysafe_pgadmin" "mysafe_sso-be" "mysafe_sso-fe" "mysafe_emqx" "mysafe_redis" "mysafe_postgres" "mysafe_nginx" "mysafe_mayweather" "mysafe_filebeat" "mysafe_logstash" "mysafe_es01" "deployments_kafka_1" )
+
+# Thu m?c luu tr? file log
+log_dir="/u01/deployments/docker_logs"
+
+# Dung lu?ng t?i da file log (5GB = 2147483648 bytes)
+max_size=$((5 * 1024 * 1024 * 1024))
+
+# S? ngày luu gi? logs
+log_retention_days=90
+
+# Hàm d? ghi logs t? container vào file tuong ?ng
+copy_logs() {
+for container in "${containers[@]}"; do
+log_file="$log_dir/${container}_log.log"
+echo "Copying logs from $container to $log_file..."
+docker logs --since=2160h "$container" > "$log_file"
+done
+}
+
+# Hàm ki?m tra kích thu?c file log và xóa n?u quá l?n
+check_file_size() {
+for container in "${containers[@]}"; do
+log_file="$log_dir/${container}_log.log"
+if [ -f "$log_file" ]; then
+file_size=$(stat --format="%s" "$log_file")
+if [ "$file_size" -gt "$max_size" ]; then
+echo "Log file $log_file exceeds 5GB. Truncating..."
+: > "$log_file" # Xóa n?i dung file (ghi dè, nhung gi? nguyên file)
+fi
+fi
+done
+}
+
+# Hàm d? t? d?ng xóa logs cu sau 90 ngày
+delete_old_logs() {
+echo "Checking for logs older than $log_retention_days days..."
+find "$log_dir" -name "*.log" -mtime +$log_retention_days -exec rm -f {} \;
+}
+
+# Th?c thi các bu?c trên
+check_file_size
+copy_logs
+delete_old_logs
+
+echo "Log collection completed."
